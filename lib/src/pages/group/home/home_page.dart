@@ -13,7 +13,17 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Team Chat App"),
       ),
-      body: Container(),
+      body: Center(
+        child: TextButton(
+            onPressed: showDialog(context: context, builder: builder),
+            child: const Text(
+              "Initiate Team Chat",
+              style: TextStyle(
+                color: Colors.teal,
+                fontSize: 16,
+              ),
+            )),
+      ),
     );
   }
 }
