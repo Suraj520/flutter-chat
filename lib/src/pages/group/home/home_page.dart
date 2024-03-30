@@ -9,6 +9,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Container());
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Team Chat App"),
+      ),
+      body: Container(),
+    );
   }
 }
