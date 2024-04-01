@@ -1,16 +1,21 @@
 // home_page.dart
 import 'package:flutter/material.dart';
-import 'package:socketio_flutter/src/pages/chat/chat_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   TextEditingController _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +32,7 @@ class _HomePageState extends State<HomePage> {
                 title: const Text("Please Enter your name"),
                 content: TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Enter your name',
                   ),
                 ),
@@ -62,10 +67,22 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class ChatPage extends StatelessWidget {
+  final String username;
+
+  const ChatPage({Key? key, required this.username}) : super(key: key);
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Chat - $username"),
+      ),
+      body: Center(
+        child: Text("Chat Page for $username"),
+      ),
+    );
   }
 }
