@@ -25,6 +25,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   TextEditingController _messageController = TextEditingController();
+  TextEditingController _usernameController = TextEditingController();
   List<String> _messages = [];
   late IO.Socket socket;
 
@@ -51,8 +52,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void sendMessage() {
-    if (_messageController.text.isNotEmpty) {
-      socket.emit('message', _messageController.text);
+    if (_messageController.text.isNotEmpty &&
+        _usernameController.text.isNotEmpty) {
+      socket.emit(
+          'message', '${_usernameController.text}: ${_messageController.text}');
+      setState(() {
+        _messages
+            .add('${_usernameController.text}: ${_messageController.text}');
+      });
       _messageController.clear();
     }
   }
@@ -92,6 +99,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: sendMessage,
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                hintText: 'Enter username...',
+              ),
             ),
           ),
         ],
