@@ -9,24 +9,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Two Person Chat',
+      title: 'Channel Chat',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: ChatScreen(),
+      home: ChannelScreen(),
     );
   }
 }
 
-class ChatScreen extends StatefulWidget {
+class ChannelScreen extends StatefulWidget {
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  _ChannelScreenState createState() => _ChannelScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  TextEditingController _messageController = TextEditingController();
-  TextEditingController _usernameController = TextEditingController();
-  List<String> _messages = [];
+class _ChannelScreenState extends State<ChannelScreen> {
+  TextEditingController _channelNameController = TextEditingController();
+  List<String> _channels = ["General"]; // Default General channel
+  String _currentChannel = "General"; // Default current channel
   late IO.Socket socket;
 
   @override
@@ -36,15 +36,108 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void initSocket() {
+    // Initialize socket
     socket = IO.io('http://localhost:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
     socket.connect();
-    socket.onConnect((_) {
-      print('Connected to server');
+  }
+
+  void switchChannel(String channelName) {
+    setState(() {
+      _currentChannel = channelName;
     });
-    socket.on('message', (data) {
+  }
+
+  void createChannel() {
+    setState(() {
+      String newChannel = _channelNameController.text;
+      if (newChannel.isNotEmpty && !_channels.contains(newChannel)) {
+        _channels.add(newChannel);
+        _currentChannel = newChannel;
+        _channelNameController.clear();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: _channels.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Channel Chat'),
+          bottom: TabBar(
+            isScrollable: true,
+            tabs: _channels.map((channel) {
+              return Tab(
+                text: channel,
+              );
+            }).toList(),
+          ),
+        ),
+        body: TabBarView(
+          children: _channels.map((channel) {
+            return ChatScreen(
+              socket: socket,
+              currentChannel: channel,
+            );
+          }).toList(),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('Create New Channel'),
+                content: TextField(
+                  controller: _channelNameController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter channel name',
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: createChannel,
+                    child: Text('Create'),
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+}
+
+class ChatScreen extends StatefulWidget {
+  final IO.Socket socket;
+  final String currentChannel;
+
+  ChatScreen({required this.socket, required this.currentChannel});
+
+  @override
+  _ChatScreenState createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  TextEditingController _messageController = TextEditingController();
+  TextEditingController _usernameController = TextEditingController();
+  List<String> _messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    widget.socket.on('message', (data) {
       setState(() {
         _messages.add(data);
       });
@@ -54,11 +147,11 @@ class _ChatScreenState extends State<ChatScreen> {
   void sendMessage() {
     if (_messageController.text.isNotEmpty &&
         _usernameController.text.isNotEmpty) {
-      socket.emit(
-          'message', '${_usernameController.text}: ${_messageController.text}');
+      widget.socket.emit('message',
+          '${_usernameController.text} (${widget.currentChannel}): ${_messageController.text}');
       setState(() {
-        _messages
-            .add('${_usernameController.text}: ${_messageController.text}');
+        _messages.add(
+            '${_usernameController.text} (${widget.currentChannel}): ${_messageController.text}');
       });
       _messageController.clear();
     }
@@ -66,52 +159,47 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Two Person Chat'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_messages[index]),
-                );
-              },
-            ),
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(_messages[index]),
+              );
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Enter message...',
-                    ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter message...',
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: sendMessage,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(
-                hintText: 'Enter username...',
               ),
+              IconButton(
+                icon: Icon(Icons.send),
+                onPressed: sendMessage,
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(
+              hintText: 'Enter username...',
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
