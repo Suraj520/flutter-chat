@@ -132,7 +132,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   TextEditingController _messageController = TextEditingController();
   TextEditingController _usernameController = TextEditingController();
-  List<String> _messages = [];
+  List<Map<String, dynamic>> _messages = [];
 
   @override
   void initState() {
@@ -147,11 +147,14 @@ class _ChatScreenState extends State<ChatScreen> {
   void sendMessage() {
     if (_messageController.text.isNotEmpty &&
         _usernameController.text.isNotEmpty) {
-      widget.socket.emit('message',
-          '${_usernameController.text} (${widget.currentChannel}): ${_messageController.text}');
+      Map<String, dynamic> messageData = {
+        'sender': _usernameController.text,
+        'message': _messageController.text,
+        'time': DateTime.now(),
+      };
+      widget.socket.emit('message', messageData);
       setState(() {
-        _messages.add(
-            '${_usernameController.text} (${widget.currentChannel}): ${_messageController.text}');
+        _messages.add(messageData);
       });
       _messageController.clear();
     }
@@ -163,10 +166,15 @@ class _ChatScreenState extends State<ChatScreen> {
       children: [
         Expanded(
           child: ListView.builder(
+            reverse: true, // Start from bottom
             itemCount: _messages.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(_messages[index]),
+              final message = _messages[index];
+              return MessageBubble(
+                sender: message['sender'],
+                message: message['message'],
+                time: message['time'],
+                isMe: message['sender'] == _usernameController.text,
               );
             },
           ),
@@ -180,6 +188,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   controller: _messageController,
                   decoration: InputDecoration(
                     hintText: 'Enter message...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
                   ),
                 ),
               ),
@@ -196,10 +209,70 @@ class _ChatScreenState extends State<ChatScreen> {
             controller: _usernameController,
             decoration: InputDecoration(
               hintText: 'Enter username...',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20.0),
+              ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class MessageBubble extends StatelessWidget {
+  final String sender;
+  final String message;
+  final DateTime time;
+  final bool isMe;
+
+  const MessageBubble({
+    required this.sender,
+    required this.message,
+    required this.time,
+    required this.isMe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Material(
+            elevation: 5.0,
+            borderRadius: BorderRadius.only(
+              topLeft: isMe ? Radius.circular(30.0) : Radius.circular(0.0),
+              topRight: isMe ? Radius.circular(0.0) : Radius.circular(30.0),
+              bottomLeft: Radius.circular(30.0),
+              bottomRight: Radius.circular(30.0),
+            ),
+            color: isMe ? Colors.lightBlueAccent : Colors.white,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: isMe ? Colors.white : Colors.black,
+                  fontSize: 15.0,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 4.0),
+          Text(
+            '$sender • ${time.hour}:${time.minute}',
+            style: TextStyle(
+              fontSize: 12.0,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
